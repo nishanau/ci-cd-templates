@@ -1,0 +1,131 @@
+# Reusable workflow that validates Kubernetes manifests before deploy
+name: ci-manifests
+
+on:
+  workflow_call:
+    inputs:
+      overlay_path:                     # Path to the overlay folder to validate
+        description: "Path to overlay (e.g., manifests/overlays/dev)"
+        required: true
+        type: string
+      tools_ref:                        # Tag or digest for the pre-deploy tools image
+        description: "Tag or digest for tools image"
+        required: false
+        type: string
+        default: "latest"               # Prefer pinning by digest in callers for immutability
+      policies_path:                    # Where your Rego policies live (optional)
+        description: "Path to conftest policies (rego)"
+        required: false
+        type: string
+        default: "policies"
+      kubeconform_flags:                # Extra flags for kubeconform (schema validation)
+        description: "Extra kubeconform flags"
+        required: false
+        type: string
+        default: "--strict --ignore-missing-schemas"
+      fail_on_warn:                     # Make kube-score warnings fail the job
+        description: "Fail on kube-score warnings"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read            # checkout needs this
+  packages: read            # pull the tools image from GHCR if needed
+  security-events: write    # upload SARIF to Code Scanning
+
+# Prevent duplicate runs on the same ref; cancel older in-flight runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate manifests
+    runs-on: ubuntu-latest
+
+    # Run all steps inside the shared tools container (has kustomize, kubeconform, etc.)
+    container:
+      image: ghcr.io/nishanau/ci-cd-templates/pre-deploy-tools:${{ inputs.tools_ref }}
+
+    timeout-minutes: 20
+
+    steps:
+      # 1) Pull the repo contents (manifests and optional policies)
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2) Print tool versions into the job summary for auditability
+      - name: Tool versions
+        run: toolbox-versions >> $GITHUB_STEP_SUMMARY || true
+
+      # 3) Lint raw YAML for indentation, formatting, and obvious syntax errors
+      - name: YAML lint
+        run: yamllint -d relaxed "${{ inputs.overlay_path }}"
+
+      # 4) Render the overlay to final deployable YAML and persist as build.yaml for later checks
+      - name: Render manifests (kustomize)
+        shell: bash
+        run: |
+          kustomize build "${{ inputs.overlay_path }}" | tee build.yaml
+
+      # 5) Validate rendered YAML against Kubernetes/OpenAPI schemas
+      #    --strict: fail on unknown/invalid fields
+      #    --ignore-missing-schemas: skip resources without published schemas (tune per repo)
+      - name: Schema validate (kubeconform)
+        run: kubeconform ${{ inputs.kubeconform_flags }} < build.yaml
+
+      # 6) Run org policy tests (Rego). Enforce labels, probes, resources, securityContext, etc.
+      - name: Policy tests (conftest)
+        shell: bash
+        run: |
+          if [ -d "${{ inputs.policies_path }}" ]; then
+            conftest test "${{ inputs.overlay_path }}" --policy "${{ inputs.policies_path }}" --output table
+          else
+            echo "No policies directory '${{ inputs.policies_path }}' found. Skipping."
+          fi
+
+      # 7) Heuristic best-practice checks; optionally fail on warnings for stronger gates
+      - name: kube-score best-practices
+        shell: bash
+        run: |
+          if ${{ inputs.fail_on_warn }}; then
+            kube-score score --exit-one-on-warning "${{ inputs.overlay_path }}"
+          else
+            kube-score score "${{ inputs.overlay_path }}" || true
+          fi
+
+      # 8) IaC security scan; export SARIF so findings show in GitHub Security tab
+      - name: IaC scan (Checkov → SARIF)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ${{ inputs.overlay_path }}
+          output_format: sarif
+          output_file_path: checkov.sarif
+
+      # 9) Publish SARIF results to repository “Code scanning alerts”
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov.sarif
+
+      # 10) Persist key artifacts (rendered YAML + SARIF) for 21 days for audit and debugging
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifests-ci-${{ github.run_id }}
+          path: |
+            build.yaml
+            checkov.sarif
+          retention-days: 21
+
+      # 11) Human-readable run summary
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Manifests CI"
+            echo "- Overlay: \`${{ inputs.overlay_path }}\`"
+            echo "- kubeconform flags: \`${{ inputs.kubeconform_flags }}\`"
+            echo "- kube-score fail on warn: \`${{ inputs.fail_on_warn }}\`"
+          } >> $GITHUB_STEP_SUMMARY
