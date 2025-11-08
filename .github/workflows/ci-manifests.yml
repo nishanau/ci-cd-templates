@@ -83,6 +83,7 @@ jobs:
         shell: bash
         run: |
           if [ -d "${{ inputs.policies_path }}" ]; then
+            conftest -v
             conftest test "${{ inputs.overlay_path }}" --policy "${{ inputs.policies_path }}" --output table
           else
             echo "No policies directory '${{ inputs.policies_path }}' found. Skipping."
