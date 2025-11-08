@@ -72,10 +72,6 @@ LABEL org.opencontainers.image.source="https://github.com/nishanau/ci-cd-templat
       org.opencontainers.image.description="Pre-deploy test tools for K8s manifests" \
       org.opencontainers.image.licenses="MIT"
 
-# non-root user
-RUN useradd -m runner && mkdir -p /workspace && chown -R runner:runner /workspace
-USER runner
-WORKDIR /workspace
 
 # Write a small versions helper and make it executable
 RUN cat > /usr/local/bin/toolbox-versions <<'EOF' && chmod +x /usr/local/bin/toolbox-versions
@@ -91,5 +87,10 @@ echo "kube-score: $(kube-score version)"
 echo "yq: $(yq --version)"
 echo "trivy: $(trivy --version | head -n1)"
 EOF
+
+# non-root user
+RUN useradd -m runner && mkdir -p /workspace && chown -R runner:runner /workspace
+USER runner
+WORKDIR /workspace
 
 CMD ["bash"]
