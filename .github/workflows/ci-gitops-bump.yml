@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.gitops_repo }}
-          token: ${{ inputs.gitops_pat }}
+          token: ${{ secrets.gitops_pat }}
           persist-credentials: false
           fetch-depth: 0
 
