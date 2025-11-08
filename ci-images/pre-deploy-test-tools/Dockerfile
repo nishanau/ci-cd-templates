@@ -88,9 +88,7 @@ echo "yq: $(yq --version)"
 echo "trivy: $(trivy --version | head -n1)"
 EOF
 
-# non-root user
-RUN useradd -m runner && mkdir -p /workspace && chown -R runner:runner /workspace
-USER runner
+USER root
 WORKDIR /workspace
 
 CMD ["bash"]
