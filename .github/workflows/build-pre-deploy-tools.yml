@@ -2,7 +2,7 @@ name: Build pre-deploy tools (GHCR)
 on:
   push:
     paths:
-      - "ci-cd-templates/ci-images/pre-deploy-test-tools/**"
+      - "ci-images/pre-deploy-test-tools/**"
       - ".github/workflows/build-pre-deploy-tools.yml"
   workflow_dispatch:
 
