@@ -93,10 +93,9 @@ jobs:
         shell: bash
         run: |
           if ${{ inputs.fail_on_warn }}; then
-            kube-score version
-            kube-score score --exit-one-on-warning "${{ inputs.overlay_path }}"
+            kustomize build ${{ inputs.overlay_path }} | kube-score score --exit-one-on-warning -
           else
-            kube-score score "${{ inputs.overlay_path }}" || true
+            kustomize build ${{ inputs.overlay_path }} | kube-score score - || true
           fi
 
       # 8) IaC security scan; export SARIF so findings show in GitHub Security tab
