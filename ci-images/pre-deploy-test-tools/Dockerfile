@@ -54,15 +54,18 @@ RUN curl -sSL -o /usr/local/bin/yq \
       https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 && \
     chmod +x /usr/local/bin/yq
 
-# Trivy (tarball + checksum)
-RUN curl -sSL -o /tmp/trivy.tgz https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz && \
-    curl -sSL -o /tmp/trivy.tgz.sha256sum https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz.sha256sum && \
-    (cd /tmp && sha256sum -c trivy.tgz.sha256sum) && \
-    tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy && \
-    rm -f /tmp/trivy.tgz /tmp/trivy.tgz.sha256sum
+# ---- Trivy (tarball + checksum) ----
+RUN set -euxo pipefail; \
+    cd /tmp; \
+    FN="trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz"; \
+    curl -sSLO "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/${FN}"; \
+    curl -sSLO "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/${FN}.sha256sum"; \
+    sha256sum -c "${FN}.sha256sum"; \
+    tar -xzf "${FN}" -C /usr/local/bin trivy; \
+    rm -f "${FN}" "${FN}.sha256sum"
 
 # minimal oci labels
-LABEL org.opencontainers.image.source="https://github.com/<org>/ci-cd-templates" \
+LABEL org.opencontainers.image.source="https://github.com/nishanau/ci-cd-templates" \
       org.opencontainers.image.description="Pre-deploy test tools for K8s manifests" \
       org.opencontainers.image.licenses="MIT"
 
