@@ -28,10 +28,10 @@ on:
         description: "New image tag (e.g., sha-b29c372...)"
         required: true
         type: string
+    secrets:
       gitops_pat:
         required: true
-        type: string
-
+        
 permissions:
   contents: write
 
