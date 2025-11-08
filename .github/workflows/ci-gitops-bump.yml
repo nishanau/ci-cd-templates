@@ -1,0 +1,90 @@
+# =====================================================================
+#  Reusable Workflow: CI - GitOps Bump
+#  ---------------------------------------------------------------------
+#  Purpose:
+#    - Update image tag (newTag) in a GitOps repo kustomization.yaml
+#    - Commit and push changes automatically
+#    - Used after app image build succeeds
+# =====================================================================
+
+name: CI - GitOps Bump
+
+on:
+  workflow_call:
+    inputs:
+      gitops_repo:
+        description: "GitOps repository (e.g., nishanau/gitops-infra-k8s)"
+        required: true
+        type: string
+      gitops_path:
+        description: "Path to overlay kustomization.yaml"
+        required: true
+        type: string
+      image_name:
+        description: "Full image name (e.g., nishanau/nextjs-portfolio)"
+        required: true
+        type: string
+      image_tag:
+        description: "New image tag (e.g., sha-b29c372...)"
+        required: true
+        type: string
+
+    secrets:
+      GITOPS_PAT:
+        required: true    # Personal access token with repo write access
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------
+      # Clone the GitOps repository
+      # ------------------------------------------------------------
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.gitops_repo }}
+          token: ${{ secrets.GITOPS_PAT }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      # ------------------------------------------------------------
+      # Install yq for YAML editing
+      # ------------------------------------------------------------
+      - name: Install yq
+        run: |
+          sudo wget -q https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      # ------------------------------------------------------------
+      # Update the image tag in kustomization.yaml
+      # Example target YAML:
+      #   images:
+      #     - name: nishanau/nextjs-portfolio
+      #       newTag: sha-<commit>
+      # ------------------------------------------------------------
+      - name: Update kustomization.yaml
+        run: |
+          echo "Updating image '${{ inputs.image_name }}' to tag '${{ inputs.image_tag }}'"
+          yq -i '
+            (.images[] | select(.name == "'"${{ inputs.image_name }}"'") | .newTag)
+              = "'"${{ inputs.image_tag }}"'"
+          ' "${{ inputs.gitops_path }}"
+          echo "Updated file contents:"
+          cat "${{ inputs.gitops_path }}"
+
+      # ------------------------------------------------------------
+      # Commit and push the change
+      # ------------------------------------------------------------
+      - name: Commit and push changes
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git add "${{ inputs.gitops_path }}"
+          git commit -m "bump image ${{ inputs.image_name }} to ${{ inputs.image_tag }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:main
