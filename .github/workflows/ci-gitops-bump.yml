@@ -2,9 +2,9 @@
 #  Reusable Workflow: CI - GitOps Bump
 #  ---------------------------------------------------------------------
 #  Purpose:
-#    - Update image tag (newTag) in a GitOps repo kustomization.yaml
-#    - Commit and push changes automatically
-#    - Used after app image build succeeds
+#    - Updates image tag (newTag) in the GitOps repo's kustomization.yaml
+#    - Commits and pushes the change automatically
+#    - Used after a successful app image build in the main pipeline
 # =====================================================================
 
 name: CI - GitOps Bump
@@ -13,11 +13,11 @@ on:
   workflow_call:
     inputs:
       gitops_repo:
-        description: "GitOps repository (e.g., nishanau/gitops-infra-k8s)"
+        description: "Target GitOps repository (e.g., nishanau/gitops-infra-k8s)"
         required: true
         type: string
       gitops_path:
-        description: "Path to overlay kustomization.yaml"
+        description: "Path to the overlay kustomization.yaml file"
         required: true
         type: string
       image_name:
@@ -30,10 +30,10 @@ on:
         type: string
     secrets:
       gitops_pat:
-        required: true
-        
+        required: true   # Personal Access Token (PAT) for repo write access
+
 permissions:
-  contents: write
+  contents: write       # Needed for committing and pushing changes
 
 jobs:
   bump:
@@ -41,35 +41,34 @@ jobs:
 
     steps:
       # ------------------------------------------------------------
-      # Clone the GitOps repository
+      # 1. Checkout the GitOps repository where manifests live
       # ------------------------------------------------------------
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.gitops_repo }}
-          token: ${{ secrets.gitops_pat }}
-          persist-credentials: false
-          fetch-depth: 0
+          repository: ${{ inputs.gitops_repo }}     # e.g. nishanau/NextJSPortfolioSite
+          token: ${{ secrets.gitops_pat }}          # PAT forwarded from caller workflow
+          persist-credentials: true                 # keep credentials for git push
+          fetch-depth: 0                            # full history to allow push
+          ref: main                                 # optional: explicitly checkout main
 
       # ------------------------------------------------------------
-      # Install yq for YAML editing
+      # 2. Install yq for YAML editing
       # ------------------------------------------------------------
       - name: Install yq
         run: |
           sudo wget -q https://github.com/mikefarah/yq/releases/download/v4.44.2/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
+          echo "yq version:"
           yq --version
 
       # ------------------------------------------------------------
-      # Update the image tag in kustomization.yaml
-      # Example target YAML:
-      #   images:
-      #     - name: nishanau/nextjs-portfolio
-      #       newTag: sha-<commit>
+      # 3. Update the image tag in kustomization.yaml
       # ------------------------------------------------------------
       - name: Update kustomization.yaml
         run: |
           echo "Updating image '${{ inputs.image_name }}' to tag '${{ inputs.image_tag }}'"
+          # Replace .newTag value of matching image
           yq -i '
             (.images[] | select(.name == "'"${{ inputs.image_name }}"'") | .newTag)
               = "'"${{ inputs.image_tag }}"'"
@@ -78,12 +77,19 @@ jobs:
           cat "${{ inputs.gitops_path }}"
 
       # ------------------------------------------------------------
-      # Commit and push the change
+      # 4. Commit and push the change
       # ------------------------------------------------------------
       - name: Commit and push changes
         run: |
+          # Configure bot identity for commit
           git config user.name "ci-bot"
           git config user.email "ci-bot@users.noreply.github.com"
+
+          # Stage modified file
           git add "${{ inputs.gitops_path }}"
+
+          # Commit only if there are changes; otherwise skip
           git commit -m "bump image ${{ inputs.image_name }} to ${{ inputs.image_tag }} [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:main
+
+          # Push back to the same repo branch that triggered the flow
+          git push origin HEAD:${{ github.ref_name }}
