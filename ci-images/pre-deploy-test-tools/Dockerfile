@@ -46,7 +46,7 @@ RUN V="${CONFTEST_VERSION#v}"; \
 
 # kube-score
 RUN curl -sSL -o /usr/local/bin/kube-score \
-      https://github.com/zegl/kube-score/releases/download/${KUBE_SCORE_VERSION}/kube-score_ubuntu_amd64 && \
+      https://github.com/zegl/kube-score/releases/download/v1.20.0/kube-score_1.20.0_linux_amd64 && \
     chmod +x /usr/local/bin/kube-score
 
 # yq
