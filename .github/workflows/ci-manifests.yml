@@ -47,6 +47,7 @@ jobs:
     # Run all steps inside the shared tools container (has kustomize, kubeconform, etc.)
     container:
       image: ghcr.io/nishanau/ci-cd-templates/pre-deploy-tools:${{ inputs.tools_ref }}
+      options: --user 0:0
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
