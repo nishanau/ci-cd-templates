@@ -95,7 +95,7 @@ jobs:
           if ${{ inputs.fail_on_warn }}; then
             kustomize build ${{ inputs.overlay_path }} | kube-score score --exit-one-on-warning -
           else
-            kustomize build ${{ inputs.overlay_path }} | kube-score score - || true
+            kustomize build ${{ inputs.overlay_path }} | kube-score score -
           fi
 
       # 8) IaC security scan; export SARIF so findings show in GitHub Security tab
