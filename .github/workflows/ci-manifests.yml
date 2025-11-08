@@ -105,7 +105,7 @@ jobs:
           directory: ${{ inputs.overlay_path }}
           output_format: sarif
           output_file_path: checkov.sarif
-          skip_checks: CKV_K8S_43
+          skip_check: CKV_K8S_43
 
       # 9) Publish SARIF results to repository “Code scanning alerts”
       - name: Upload SARIF
