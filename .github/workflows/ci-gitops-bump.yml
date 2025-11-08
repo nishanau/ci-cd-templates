@@ -50,7 +50,7 @@ jobs:
           token: ${{ secrets.gitops_pat }}          # PAT forwarded from caller workflow
           persist-credentials: true                 # keep credentials for git push
           fetch-depth: 0                            # full history to allow push
-          ref: main                                 # optional: explicitly checkout main
+          ref: ${{ github.ref_name }}               # checkout the branch that triggered the workflow
 
       # ------------------------------------------------------------
       # 2. Install yq for YAML editing
@@ -65,7 +65,7 @@ jobs:
       # ------------------------------------------------------------
       # 3. Update the image tag in kustomization.yaml
       # ------------------------------------------------------------
-      - name: Update kustomization.yaml
+      - name: Update Image Tag in kustomization.yaml
         run: |
           echo "Updating image '${{ inputs.image_name }}' to tag '${{ inputs.image_tag }}'"
           # Replace .newTag value of matching image
