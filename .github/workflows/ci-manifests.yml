@@ -78,12 +78,18 @@ jobs:
       - name: Schema validate (kubeconform)
         run: kubeconform ${{ inputs.kubeconform_flags }} < build.yaml
 
+      - name: Debug Conftest + OPA version
+        run: |
+          which conftest
+          conftest version
+          which opa || true
+          opa version || true
+
       # 6) Run org policy tests (Rego). Enforce labels, probes, resources, securityContext, etc.
       - name: Policy tests (conftest)
         shell: bash
         run: |
           if [ -d "${{ inputs.policies_path }}" ]; then
-            conftest -v
             conftest test "${{ inputs.overlay_path }}" --policy "${{ inputs.policies_path }}" --output table
           else
             echo "No policies directory '${{ inputs.policies_path }}' found. Skipping."
