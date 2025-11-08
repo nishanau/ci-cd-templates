@@ -57,12 +57,15 @@ RUN curl -sSL -o /usr/local/bin/yq \
 # ---- Trivy (tarball + checksum) ----
 RUN set -euxo pipefail; \
     cd /tmp; \
-    FN="trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz"; \
+    VER="${TRIVY_VERSION#v}"; \
+    FN="trivy_${VER}_Linux-64bit.tar.gz"; \
+    CHECKS="trivy_${VER}_checksums.txt"; \
     curl -sSLO "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/${FN}"; \
-    curl -sSLO "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/${FN}.sha256sum"; \
-    sha256sum -c "${FN}.sha256sum"; \
+    curl -sSLO "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/${CHECKS}"; \
+    grep " ${FN}\$" "${CHECKS}" | sha256sum -c -; \
     tar -xzf "${FN}" -C /usr/local/bin trivy; \
-    rm -f "${FN}" "${FN}.sha256sum"
+    rm -f "${FN}" "${CHECKS}"
+
 
 # minimal oci labels
 LABEL org.opencontainers.image.source="https://github.com/nishanau/ci-cd-templates" \
