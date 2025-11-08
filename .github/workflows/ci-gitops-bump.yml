@@ -28,10 +28,9 @@ on:
         description: "New image tag (e.g., sha-b29c372...)"
         required: true
         type: string
-
-    secrets:
-      GITOPS_PAT:
-        required: true    # Personal access token with repo write access
+      gitops_pat:
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -48,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.gitops_repo }}
-          token: ${{ secrets.GITOPS_PAT }}
+          token: ${{ inputs.gitops_pat }}
           persist-credentials: false
           fetch-depth: 0
 
