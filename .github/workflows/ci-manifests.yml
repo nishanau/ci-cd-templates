@@ -78,11 +78,6 @@ jobs:
       - name: Schema validate (kubeconform)
         run: kubeconform ${{ inputs.kubeconform_flags }} < build.yaml
 
-      - name: Debug Conftest + OPA version
-        run: |
-          which conftest
-          conftest -v
-
       # 6) Run org policy tests (Rego). Enforce labels, probes, resources, securityContext, etc.
       - name: Policy tests (conftest)
         shell: bash
@@ -98,6 +93,7 @@ jobs:
         shell: bash
         run: |
           if ${{ inputs.fail_on_warn }}; then
+            kube-score version
             kube-score score --exit-one-on-warning "${{ inputs.overlay_path }}"
           else
             kube-score score "${{ inputs.overlay_path }}" || true
