@@ -71,16 +71,19 @@ RUN useradd -m runner && mkdir -p /workspace && chown -R runner:runner /workspac
 USER runner
 WORKDIR /workspace
 
-# version snapshot for logs
-RUN echo '#!/bin/bash
-set -e
-echo "kubectl: $(kubectl version --client=true --output=yaml | grep gitVersion | awk '\''{print $2}'\'')"
-echo "kustomize: $(kustomize version | tr -d \"{}\")."
+# Write a small versions helper and make it executable
+RUN cat > /usr/local/bin/toolbox-versions <<'EOF' && chmod +x /usr/local/bin/toolbox-versions
+#!/usr/bin/env bash
+set -euo pipefail
+
+kubectl_v="$(kubectl version --client=true --output=yaml | grep gitVersion | awk '{print $2}')"
+echo "kubectl: ${kubectl_v}"
+echo "kustomize: $(kustomize version | tr -d '{}')"
 echo "kubeconform: $(kubeconform -v)"
 echo "conftest: $(conftest --version)"
 echo "kube-score: $(kube-score version)"
 echo "yq: $(yq --version)"
 echo "trivy: $(trivy --version | head -n1)"
-' > /usr/local/bin/toolbox-versions && chmod +x /usr/local/bin/toolbox-versions
+EOF
 
 CMD ["bash"]
