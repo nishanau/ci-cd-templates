@@ -81,9 +81,7 @@ jobs:
       - name: Debug Conftest + OPA version
         run: |
           which conftest
-          conftest version
-          which opa || true
-          opa version || true
+          conftest -v
 
       # 6) Run org policy tests (Rego). Enforce labels, probes, resources, securityContext, etc.
       - name: Policy tests (conftest)
