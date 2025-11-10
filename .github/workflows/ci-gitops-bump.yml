@@ -50,7 +50,7 @@ jobs:
           token: ${{ secrets.gitops_pat }}          # PAT forwarded from caller workflow
           persist-credentials: true                 # keep credentials for git push
           fetch-depth: 0                            # full history to allow push
-          ref: ${{ github.ref_name }}               # checkout the branch that triggered the workflow
+          ref: ${{ github.event.pull_request.base.ref || github.ref_name }}             # checkout the branch that triggered the workflow
 
       # ------------------------------------------------------------
       # 2. Install yq for YAML editing
@@ -92,4 +92,4 @@ jobs:
           git commit -m "bump image ${{ inputs.image_name }} to ${{ inputs.image_tag }} [skip ci]" || echo "No changes to commit"
 
           # Push back to the same repo branch that triggered the flow
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:${{ github.event.pull_request.base.ref || github.ref_name }}
