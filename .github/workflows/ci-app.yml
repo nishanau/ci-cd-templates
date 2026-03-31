@@ -99,7 +99,7 @@ jobs:
             ${{ inputs.image_name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: true
+          provenance: false
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -133,15 +133,20 @@ jobs:
       # ----------------------------------------------------------
       # Login and push ONLY after a clean scan
       # ----------------------------------------------------------
-      - name: Log in to Docker Hub
-        if: ${{ inputs.push_image }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Push image to Docker Hub
         if: ${{ inputs.push_image }}
-        run: |
-          docker push ${{ inputs.image_name }}:sha-${{ github.sha }}
-          docker push ${{ inputs.image_name }}:latest
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: true
+          load: false
+          provenance: true
+          tags: |
+            ${{ inputs.image_name }}:sha-${{ github.sha }}
+            ${{ inputs.image_name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.source=${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
