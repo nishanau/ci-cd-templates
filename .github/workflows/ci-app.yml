@@ -89,18 +89,23 @@ jobs:
       # ----------------------------------------------------------
       - name: Build image (local only)
         uses: docker/build-push-action@v6
+        env:
+          # This prevents the action from trying to collect metadata for the UI summary
+          DOCKER_BUILD_SUMMARY: false  
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           push: false
           load: true
+          provenance: false # Keeps the actual attestation off
+          sbom: false      # Ensure SBOM is also off
           tags: ${{ inputs.image_name }}:sha-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: false
           labels: |
             org.opencontainers.image.source=${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+
             
       # ----------------------------------------------------------
       # Scan the locally loaded image BEFORE pushing
