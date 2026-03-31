@@ -88,7 +88,7 @@ jobs:
       # Scanning happens before any public push
       # ----------------------------------------------------------
       - name: Build image (local only)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v3
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
