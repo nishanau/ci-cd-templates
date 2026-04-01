@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Echo Outputs
-        run: echo "latest change 1"
+        run: echo "latest change 2"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
